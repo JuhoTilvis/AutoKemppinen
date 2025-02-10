@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viikkokalenteri ja Ajanvaraus</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="time"] {
+            padding: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            text-align: center;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 10px;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .free {
+            background-color: #d4edda;
+        }
+    </style>
+</head>
+<body>
+<h1>Book an Appointment</h1>
+<form id="bookingForm">
+    <label for="time">Select Time:</label>
+    <input type="time" id="time" name="time" required>
+    <button type="submit">Book Appointment</button>
+</form>
+<div id="message"></div>
+
+<h1>Viikkokalenteri</h1>
+<table>
+    <thead>
+    <tr>
+        <th>Aika</th>
+        <th>Maanantai</th>
+        <th>Tiistai</th>
+        <th>Keskiviikko</th>
+        <th>Torstai</th>
+        <th>Perjantai</th>
+    </tr>
+    </thead>
+    <tbody id="calendar-body">
+    </tbody>
+</table>
+
+<script>
+    document.getElementById('bookingForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const time = document.getElementById('time').value;
+
+        fetch('/api/appointments/book', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ time: time }),
+        })
+            .then(response => response.ok ? response.text() : Promise.reject(response.text()))
+            .then(message => {
+                document.getElementById('message').textContent = message;
+            })
+            .catch(error => {
+                error.then(err => {
+                    document.getElementById('message').textContent = err;
+                });
+            });
+    });
+
+    function createSchedule() {
+        const tbody = document.getElementById("calendar-body");
+        for (let hour = 8; hour <= 16; hour++) {
+            let row = document.createElement("tr");
+            let timeCell = document.createElement("td");
+            timeCell.textContent = `${hour}:00 - ${hour + 1}:00`;
+            row.appendChild(timeCell);
+            for (let day = 1; day <= 5; day++) {
+                let cell = document.createElement("td");
+                cell.classList.add("free");
+                cell.textContent = "Vapaa";
+                row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+        }
+    }
+    createSchedule();
+</script>
+</body>
+</html>
