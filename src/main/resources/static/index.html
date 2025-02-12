@@ -22,7 +22,7 @@
             display: block;
             margin-bottom: 5px;
         }
-        input[type="time"] {
+        input[type="time"], input[type="date"] {
             padding: 5px;
             font-size: 16px;
         }
@@ -56,15 +56,24 @@
         }
         .free {
             background-color: #d4edda;
+            cursor: pointer;
+        }
+        .booked {
+            background-color: #f8d7da;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
 <h1>Book an Appointment</h1>
 <form id="bookingForm">
-    <label for="time">Select Time:</label>
+    <label for="date">Valitse päivä:</label>
+    <input type="date" id="date" name="date" required>
+
+    <label for="time">Valitse aika:</label>
     <input type="time" id="time" name="time" required>
-    <button type="submit">Book Appointment</button>
+
+    <button type="submit">Varaa aika</button>
 </form>
 <div id="message"></div>
 
@@ -85,45 +94,72 @@
 </table>
 
 <script>
-    document.getElementById('bookingForm').addEventListener('submit', function (event) {
-        event.preventDefault();
-        const time = document.getElementById('time').value;
-
+    function bookAppointment(date, time) {
         fetch('/api/appointments/book', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ time: time }),
+            body: JSON.stringify({date: date, time: time}),
         })
             .then(response => response.ok ? response.text() : Promise.reject(response.text()))
             .then(message => {
-                document.getElementById('message').textContent = message;
+                document.getElementById('message').textContent = "Varaus onnistui";
+                updateCalendar();
             })
             .catch(error => {
                 error.then(err => {
-                    document.getElementById('message').textContent = err;
+                    document.getElementById('message').textContent = "Varaus epäonnistui: " + err;
+                }).catch(() => {
+                    document.getElementById('message').textContent = "Varaus epäonnistui! Tarkista palvelin.";
                 });
             });
+
+    }
+
+    function updateCalendar() {
+        fetch('/api/appointments/available')
+            .then(response => response.json())
+            .then(appointments => {
+                const calendarBody = document.getElementById('calendar-body');
+                calendarBody.innerHTML = '';
+
+                for (let hour = 8; hour <= 16; hour++) {
+                    let row = document.createElement("tr");
+                    let timeCell = document.createElement("td");
+                    timeCell.textContent = `${hour}:00 - ${hour + 1}:00`;
+                    row.appendChild(timeCell);
+
+                    for (let day = 1; day <= 5; day++) {
+                        let cell = document.createElement("td");
+                        const timeSlot = `${hour}:00`;
+                        const appointment = appointments.find(app => app.time === timeSlot);
+
+                        if (appointment && !appointment.available) {
+                            cell.classList.add("booked");
+                            cell.textContent = "Varattu";
+                        } else {
+                            cell.classList.add("free");
+                            cell.textContent = "Vapaa";
+                            cell.addEventListener('click', () => {
+                                bookAppointment(document.getElementById('date').value, timeSlot);
+                            });
+                        }
+                        row.appendChild(cell);
+                    }
+                    calendarBody.appendChild(row);
+                }
+            });
+    }
+
+    document.getElementById('bookingForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const date = document.getElementById('date').value;
+        const time = document.getElementById('time').value;
+        bookAppointment(date, time);
     });
 
-    function createSchedule() {
-        const tbody = document.getElementById("calendar-body");
-        for (let hour = 8; hour <= 16; hour++) {
-            let row = document.createElement("tr");
-            let timeCell = document.createElement("td");
-            timeCell.textContent = `${hour}:00 - ${hour + 1}:00`;
-            row.appendChild(timeCell);
-            for (let day = 1; day <= 5; day++) {
-                let cell = document.createElement("td");
-                cell.classList.add("free");
-                cell.textContent = "Vapaa";
-                row.appendChild(cell);
-            }
-            tbody.appendChild(row);
-        }
-    }
-    createSchedule();
+    updateCalendar();
 </script>
 </body>
 </html>
