@@ -11,6 +11,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 public class AppointmentRequest {
     private Long id;
-    private LocalTime time;
     private LocalDate date;
+    private LocalTime time;
+    private Boolean available;
 }
